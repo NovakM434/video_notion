@@ -1,6 +1,7 @@
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseDownload
+import time
 import requests
 import json
 
@@ -28,11 +29,9 @@ if not items:
 else:
     print('Video links:')
     for item in items:
-        # Получение прямой ссылки на скачивание файла
         file = drive_service.files().get(fileId=item['id'], fields='webContentLink').execute()
         download_url = file.get('webContentLink')
 
-        # Формирование данных для запроса на импорт встречи
         import_data = {
             "url": download_url,
             "name": item['name'],
@@ -47,7 +46,6 @@ else:
             ]
         }
 
-        # Отправка запроса на импорт встречи
         headers = {
             'Content-Type': 'application/json',
             'x-api-key': api_key
@@ -57,5 +55,9 @@ else:
         # Проверка ответа
         if response.status_code == 200:
             print(f"Встреча '{item['name']}' успешно импортирована.")
+            job_id = response.json()['jobId']
+            time.sleep(60)
+            response = requests.get(f'https://pasta.tldv.io/v1alpha1/meetings/{job_id}/transcript', headers=headers)
+            print(response.json())
         else:
             print(f"Ошибка при импорте встречи '{item['name']}': {response.text}")
